@@ -855,13 +855,23 @@ else:
             st.markdown("#### Scatter plots for strongly correlated pairs")
             for _, row in strong_pairs.head(6).iterrows():
                 ca, cb = row["Column A"], row["Column B"]
+                plot_df = data[[ca, cb]].replace([np.inf, -np.inf], np.nan).dropna()
                 fig_sc = px.scatter(
-                    data, x=ca, y=cb,
+                    plot_df, x=ca, y=cb,
                     title=f"{ca} vs {cb}  (r = {row['Pearson r']})",
                     template="plotly_white", color_discrete_sequence=["#187f83"],
-                    trendline="ols", trendline_color_override="#c75b5b",
                     opacity=0.6,
                 )
+                # Add numpy polyfit trendline (no statsmodels dependency)
+                if len(plot_df) >= 2:
+                    m, b = np.polyfit(plot_df[ca].astype(float), plot_df[cb].astype(float), 1)
+                    x_range = np.linspace(plot_df[ca].min(), plot_df[ca].max(), 100)
+                    import plotly.graph_objects as go
+                    fig_sc.add_trace(go.Scatter(
+                        x=x_range, y=m * x_range + b,
+                        mode="lines", line=dict(color="#c75b5b", width=2),
+                        name="Trend",
+                    ))
                 st.plotly_chart(fig_sc, use_container_width=True)
 
 # ═══════════════════════════════════════════════════════════════════════
